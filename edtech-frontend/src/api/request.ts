@@ -2,7 +2,7 @@ import axios, { type InternalAxiosRequestConfig, type AxiosResponse } from 'axio
 
 // --- Configuration ---
 // Set this to 'false' to use real backend
-export const ENABLE_MOCK = false; 
+export const ENABLE_MOCK = true; 
 
 const BASE_URL = 'http://localhost:8080/api';
 

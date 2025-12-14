@@ -1,0 +1,124 @@
+package com.edtech.web.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.edtech.model.entity.*;
+import com.edtech.model.mapper.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/achievement")
+@Slf4j
+@RequiredArgsConstructor
+public class AchievementController {
+
+    private final AchievementMapper achievementMapper;
+    private final UserAchievementMapper userAchievementMapper;
+    private final UserPointsMapper userPointsMapper;
+    private final UserMapper userMapper;
+
+    /**
+     * 获取所有成就定义
+     */
+    @GetMapping("/all")
+    public List<Achievement> getAllAchievements() {
+        return achievementMapper.selectList(null);
+    }
+
+    /**
+     * 获取用户已获得的成就ID列表
+     */
+    @GetMapping("/user/{userId}")
+    public Map<String, Object> getUserAchievements(@PathVariable Long userId) {
+        // Get all achievements
+        List<Achievement> allAchievements = achievementMapper.selectList(null);
+        
+        // Get user's unlocked achievement IDs
+        List<Long> unlockedIds = userAchievementMapper.selectAchievementIdsByUserId(userId);
+        Set<Long> unlockedSet = new HashSet<>(unlockedIds);
+
+        // Get user points for stats
+        UserPoints points = userPointsMapper.selectOne(
+                new LambdaQueryWrapper<UserPoints>().eq(UserPoints::getUserId, userId));
+
+        // Build response
+        List<Map<String, Object>> achievementList = allAchievements.stream().map(ach -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", ach.getId());
+            item.put("code", ach.getCode());
+            item.put("name", ach.getName());
+            item.put("description", ach.getDescription());
+            item.put("icon", ach.getIcon());
+            item.put("category", ach.getCategory());
+            item.put("rarity", ach.getRarity());
+            item.put("pointsReward", ach.getPointsReward());
+            item.put("unlocked", unlockedSet.contains(ach.getId()));
+            return item;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("achievements", achievementList);
+        result.put("totalUnlocked", unlockedIds.size());
+        result.put("totalAchievements", allAchievements.size());
+        
+        if (points != null) {
+            result.put("totalPoints", points.getTotalPoints());
+            result.put("currentStreak", points.getCurrentStreak());
+            result.put("longestStreak", points.getLongestStreak());
+        }
+        
+        return result;
+    }
+
+    /**
+     * 获取用户积分和统计信息
+     */
+    @GetMapping("/stats/{userId}")
+    public UserPoints getUserStats(@PathVariable Long userId) {
+        UserPoints points = userPointsMapper.selectOne(
+                new LambdaQueryWrapper<UserPoints>().eq(UserPoints::getUserId, userId));
+        if (points == null) {
+            // Create default if not exists
+            points = new UserPoints();
+            points.setUserId(userId);
+            points.setTotalPoints(0);
+            points.setCurrentStreak(0);
+            points.setLongestStreak(0);
+            points.setTotalPracticeCount(0);
+            points.setTotalCorrectCount(0);
+            points.setTotalPracticeTime(0);
+            userPointsMapper.insert(points);
+        }
+        return points;
+    }
+
+    /**
+     * 获取掌握金牌列表(高掌握知识点)
+     */
+    @GetMapping("/mastery/{userId}")
+    public List<Map<String, Object>> getMasteredKnowledgePoints(@PathVariable Long userId,
+            @RequestParam(defaultValue = "0.8") double threshold) {
+        // This would query knowledge_state for high mastery points
+        // Simplified: return mock data
+        List<Map<String, Object>> mastered = new ArrayList<>();
+        Map<String, Object> m1 = new HashMap<>();
+        m1.put("knowledgePointId", 1);
+        m1.put("name", "函数与导数");
+        m1.put("mastery", 0.92);
+        m1.put("medal", "gold");
+        mastered.add(m1);
+        
+        Map<String, Object> m2 = new HashMap<>();
+        m2.put("knowledgePointId", 3);
+        m2.put("name", "数列");
+        m2.put("mastery", 0.88);
+        m2.put("medal", "gold");
+        mastered.add(m2);
+        
+        return mastered;
+    }
+}

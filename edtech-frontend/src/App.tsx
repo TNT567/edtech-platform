@@ -6,6 +6,11 @@ import PracticePage from './pages/PracticePage';
 import ReportPage from './pages/ReportPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
+import WrongQuestionsPage from './pages/WrongQuestionsPage';
+import AchievementsPage from './pages/AchievementsPage';
+import LeaderboardPage from './pages/LeaderboardPage';
+import DailyGoalsPage from './pages/DailyGoalsPage';
+import ParentDashboardPage from './pages/ParentDashboardPage';
 import RequireAuth from './components/auth/RequireAuth';
 
 function App() {
@@ -23,6 +28,11 @@ function App() {
           <Route path="practice" element={<PracticePage />} />
           <Route path="report" element={<ReportPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="wrong-questions" element={<WrongQuestionsPage />} />
+          <Route path="achievements" element={<AchievementsPage />} />
+          <Route path="leaderboard" element={<LeaderboardPage />} />
+          <Route path="daily-goals" element={<DailyGoalsPage />} />
+          <Route path="parent" element={<ParentDashboardPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

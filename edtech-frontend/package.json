@@ -12,8 +12,10 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.17",
     "axios": "^1.13.2",
+    "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.25",
+    "howler": "^2.2.4",
     "katex": "^0.16.27",
     "lucide-react": "^0.556.0",
     "react": "^19.2.0",
