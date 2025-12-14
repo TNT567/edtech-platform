@@ -19,15 +19,31 @@
 - **家长控制**: 扫码绑定家长，支持查看权限控制与每日时长限制。
 - **无感保存**: 全局配置实时防抖保存，体验丝般顺滑。
 
-### 3. 🏢 多租户与机构管理 (Multi-tenancy)
+### 3. 📱 全新移动端核心页面 (Mobile Core Pages) [NEW]
+- **仪表盘升级**: 全新设计的学习概览，包含进度追踪、今日目标完成情况、知识点掌握雷达图。
+- **错题本页面**: 智能分类错题，支持按科目、时间、掌握程度筛选，集成AI深度解析。
+- **成就系统**: 游戏化徽章与等级体系，激励持续学习，展示学习里程碑。
+- **排行榜**: 实时学习排名，支持好友PK与班级排名，激发学习动力。
+- **每日目标**: 可视化目标设定与追踪，番茄钟专注模式，健康学习提醒。
+- **家长看板**: 家长专属视图，全面了解孩子学习进度、时间分布、成绩趋势。
+
+### 4. 🎮 沉浸式动画与游戏化体验 (Immersive Animations & Gamification) [NEW]
+- **流畅过渡动画**: 页面切换、组件加载均配备专业级动画效果，提升用户体验。
+- **答题反馈系统**: 正确/错误答案即时视觉+听觉反馈，增强学习沉浸感。
+- **进度可视化**: 知识点掌握进度、学习 streak、成就解锁等动态效果。
+- **庆祝时刻**: 完成目标、解锁成就时的炫酷弹窗动画与音效。
+- **微交互细节**: 按钮悬停、点击波纹、拖拽排序等精致交互动效。
+- **声音系统**: 集成专业音效库，提供可配置的声音开关选项。
+
+### 5. 🏢 多租户与机构管理 (Multi-tenancy)
 - **SaaS 架构**: 支持单实例服务多机构（Domain Isolation），数据逻辑隔离。
 - **机构后台**: 独立配置品牌 Logo、专属课程内容与定价策略。
 
-### 4. 💰 商业化与变现 (Monetization)
+### 6. 💰 商业化与变现 (Monetization)
 - **订阅系统**: 集成 Stripe / Alipay 支付接口，支持月付/年付订阅计划。
 - **订单管理**: 完整的订单生命周期管理（待支付、已支付、退款）。
 
-### 5. 🧠 核心教学引擎 (Core Engine)
+### 7. 🧠 核心教学引擎 (Core Engine)
 - **BKT 知识追踪**: 贝叶斯算法实时计算知识点掌握概率 (Redis L1 + MySQL L2)。
 - **AI 智能辅导**: 接入 Qwen-Plus 大模型，生成千人千面的题目与详细解析 (Markdown/LaTeX)。
 - **自适应学习路径**: 基于知识图谱与当前状态推荐最佳学习内容。
@@ -36,9 +52,10 @@
   - **纠错专项模式**: 错题后自动触发 Drill Mode，直到连续答对为止。
   - **游戏化激励**: 知识点金牌掌握特效，提升学习成就感。
 
-### 6. ☁️ 云原生与可观测性 (Cloud Native)
+### 8. ☁️ 云原生与可观测性 (Cloud Native)
 - **Docker 容器化**: 提供标准 `Dockerfile` 与 `docker-compose.yml` 一键部署。
 - **全链路监控**: 集成 Actuator + Prometheus + Grafana，实时监控 JVM、DB 连接池与业务指标。
+- **健康检查**: 集成 Spring Boot Actuator，支持应用健康状态实时监测。
 
 ---
 
@@ -62,6 +79,8 @@
 | **Framework** | React 19 + Vite | 高性能 SPA |
 | **Styling** | Tailwind CSS v4 | 原子化 CSS |
 | **Router** | React Router v6 | 路由管理 |
+| **Animation** | Framer Motion | 专业级动画库 |
+| **Sound** | Howler.js | 音频播放系统 |
 | **Viz** | Recharts | 数据可视化 (雷达图) |
 | **Math** | KaTeX / React-Latex | 数学公式渲染 |
 | **Icons** | Lucide React | 现代化图标库 |
@@ -80,6 +99,7 @@
 1. `sql/init.sql` (核心业务表)
 2. `sql/saas_upgrade.sql` (SaaS 增强表：租户、权限、订单)
 3. `sql/settings_upgrade.sql` (设置中心表：用户偏好、家长绑定) [NEW]
+4. `sql/mobile_pages_upgrade.sql` (移动端核心页面表) [NEW]
 
 ### 3. 一键启动 (Docker Compose)
 在项目根目录下执行：
@@ -103,6 +123,7 @@ docker-compose up -d --build
 | :--- | :--- | :--- | :--- |
 | **超级管理员** | `admin` | `admin123` | 全平台管理 |
 | **学生** | `student` | `123456` | 学习、刷题、查看报告 |
+| **家长** | `parent` | `123456` | 查看孩子学习报告与进度 |
 
 ---
 
@@ -133,6 +154,14 @@ edtech-platform2/
 - `GET /api/settings`: 获取用户全量设置
 - `PUT /api/settings`: 更新用户设置 (支持增量更新)
 - `POST /api/settings/bind-parent`: 绑定家长账号
+
+### 移动端核心功能 (Mobile Core Features) [NEW]
+- `GET /api/dashboard/stats`: 获取学习统计信息
+- `GET /api/wrong-questions`: 获取错题列表
+- `GET /api/achievements`: 获取成就列表
+- `GET /api/leaderboard`: 获取排行榜数据
+- `GET /api/daily-goals`: 获取每日目标状态
+- `GET /api/parent/dashboard`: 获取家长看板数据
 
 ### 商业化 (Commerce)
 - `POST /api/payment/create-order`: 创建订阅订单
