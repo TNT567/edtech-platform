@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { BentoCard } from '../components/ui/BentoCard';
 import { KnowledgeRadarChart, type KnowledgeStateVO } from '../components/dashboard/KnowledgeRadarChart';
 import { AreaChart, Area, XAxis, Tooltip as ReTooltip, ResponsiveContainer } from 'recharts';
-import { Radar, Activity, AlertTriangle, Zap, TrendingUp } from 'lucide-react';
+import { Radar, Activity, TriangleAlert, Zap, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getKnowledgeRadar, getPrediction, type PredictionResult } from '../api/services/knowledge';
 
@@ -113,7 +113,7 @@ export default function DashboardPage() {
         <BentoCard 
           className="md:col-span-1"
           title="薄弱点警示"
-          icon={<AlertTriangle className="h-6 w-6 text-orange-500" />}
+          icon={<TriangleAlert className="h-6 w-6 text-orange-500" />}
         >
           <div className="space-y-3 mt-2">
             {weakPoints.length === 0 ? (

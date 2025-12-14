@@ -86,15 +86,33 @@ export async function getKnowledgeGraph(): Promise<Record<string, KnowledgePoint
   }
 }
 
+export interface QuestionResponse {
+    data: QuestionData;
+    strategy: string;
+    strategyCode: string;
+}
+
 /**
  * 获取随机题目 (Smart Practice)
  */
-export async function getRandomQuestion(): Promise<QuestionData> {
-  if (USE_MOCK) return MOCK_AI_QUESTION;
+export async function getRandomQuestion(): Promise<QuestionResponse> {
+  if (USE_MOCK) return { data: MOCK_AI_QUESTION, strategy: 'Mock Strategy', strategyCode: 'MOCK' };
   try {
     const res = await request.get<any>('/practice/random');
+    
+    // Check if response is wrapped in new Strategy format or legacy
+    let qData = res.data;
+    let strategy = "智能推荐";
+    let strategyCode = "DEFAULT";
+
+    if (res.data.data && res.data.strategy) {
+        qData = res.data.data;
+        strategy = res.data.strategy;
+        strategyCode = res.data.strategyCode;
+    }
+
     // Adapt backend response to frontend model
-    let opts = res.data.options;
+    let opts = qData.options;
     if (typeof opts === 'string') {
         try { opts = JSON.parse(opts); } catch(e) {}
     }
@@ -104,16 +122,18 @@ export async function getRandomQuestion(): Promise<QuestionData> {
         opts = Object.keys(opts).sort().map(key => opts[key]);
     }
 
-    return {
-        id: res.data.id,
-        stem: res.data.content,
+    const question: QuestionData = {
+        id: qData.id,
+        stem: qData.content,
         options: opts,
-        correctAnswer: res.data.correctAnswer,
-        analysis: res.data.analysis || "暂无解析"
+        correctAnswer: qData.correctAnswer,
+        analysis: qData.analysis || "暂无解析"
     };
+
+    return { data: question, strategy, strategyCode };
   } catch (e) {
     console.error("Fetch question failed", e);
-    return MOCK_AI_QUESTION;
+    return { data: MOCK_AI_QUESTION, strategy: 'Error Fallback', strategyCode: 'ERROR' };
   }
 }
 
@@ -191,7 +211,55 @@ export async function getKnowledgeRadar(studentId: number): Promise<KnowledgeSta
 }
 
 /**
- * AI 生成题目
+ * AI 生成题目 (Manual Generation)
+ */
+export interface GenerateQuestionParams {
+    subject: string;
+    knowledgePointId?: number;
+    difficulty?: string;
+}
+
+export async function generatePracticeQuestion(params: GenerateQuestionParams): Promise<QuestionResponse> {
+    if (USE_MOCK) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return { 
+            data: { ...MOCK_AI_QUESTION, id: Date.now() }, 
+            strategy: 'Manual Selection', 
+            strategyCode: 'MANUAL' 
+        };
+    }
+    try {
+        const res = await request.get<any>('/practice/generate', { params });
+        
+        // Use same normalization logic as getRandomQuestion
+        let qData = res.data;
+        
+        // Adapt backend response to frontend model
+        let opts = qData.options;
+        if (typeof opts === 'string') {
+            try { opts = JSON.parse(opts); } catch(e) {}
+        }
+        if (opts && !Array.isArray(opts) && typeof opts === 'object') {
+            opts = Object.keys(opts).sort().map(key => opts[key]);
+        }
+
+        const question: QuestionData = {
+            id: qData.id,
+            stem: qData.content,
+            options: opts,
+            correctAnswer: qData.correctAnswer,
+            analysis: qData.analysis || "暂无解析"
+        };
+
+        return { data: question, strategy: 'Targeted Practice', strategyCode: 'MANUAL' };
+    } catch (error) {
+        console.error("Failed to generate question", error);
+        return { data: MOCK_AI_QUESTION, strategy: 'Error Fallback', strategyCode: 'ERROR' };
+    }
+}
+
+/**
+ * AI 生成题目 (Legacy/Topic based)
  * @param topic 想要复习的知识点 (Prompt)
  */
 export async function generateQuestion(topic: string): Promise<QuestionData> {

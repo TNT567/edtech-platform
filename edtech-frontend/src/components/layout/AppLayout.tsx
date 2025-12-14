@@ -5,7 +5,7 @@ import {
   Home, 
   Network, 
   PenTool, 
-  BarChart2, 
+  ChartColumn, 
   Settings,
   LogOut
 } from 'lucide-react';
@@ -15,8 +15,9 @@ const MENU_ITEMS = [
   { path: '/', label: '首页', icon: Home },
   { path: '/knowledge-graph', label: '知识图谱', icon: Network },
   { path: '/practice', label: '智能刷题', icon: PenTool },
-  { path: '/report', label: '成长报告', icon: BarChart2 },
+  { path: '/report', label: '成长报告', icon: ChartColumn },
 ];
+
 
 export default function AppLayout() {
   const location = useLocation();
@@ -76,10 +77,18 @@ export default function AppLayout() {
         </nav>
 
         <div className="pt-6 border-t border-slate-100 space-y-2">
-          <button className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-900 w-full transition-all">
+          <Link 
+            to="/settings"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all w-full",
+              location.pathname === '/settings' 
+                ? "bg-primary-50 text-primary-600 font-medium" 
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            )}
+          >
             <Settings size={20} />
             <span>设置</span>
-          </button>
+          </Link>
           <button className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 hover:bg-red-50 hover:text-red-600 w-full transition-all">
             <LogOut size={20} />
             <span>退出</span>

@@ -33,12 +33,11 @@ public class ContentGenerationService {
     /**
      * 根据知识点和掌握度生成补习题目
      */
-    public GeneratedQuestionVO generateRemedialQuestion(String knowledgePointName, double currentMastery) {
-        log.info("Generating content for KP: {}, Mastery: {}", knowledgePointName, currentMastery);
+    public GeneratedQuestionVO generateRemedialQuestion(String kpName, double probability, String commonMistakes, String lastWrong, long daysSinceReview) {
+        log.info("Generating content for KP: {}, Mastery: {}", kpName, probability);
 
-        String difficultyLevel = currentMastery < 0.4 ? "BASIC (Easy)" : "ADVANCED (Hard)";
-        String learningGoal = currentMastery < 0.4 ? "Focus on definitions and basic concepts." : "Focus on complex application and synthesis.";
-
+        String difficultyLevel = probability < 0.4 ? "1 (基础)" : "3 (进阶)";
+        
         // Manual JSON Schema for Output
         String formatExample = """
                 {
@@ -52,15 +51,16 @@ public class ContentGenerationService {
                 """;
 
         String userPrompt = StrUtil.format("""
-                Role: You are an expert AI tutor.
-                Task: Generate a single multiple-choice question for the knowledge point: {}.
-                Student State: Mastery level is {} (scale 0-1).
-                Requirement:
-                - Difficulty: {}
-                - Goal: {}
-                - Language: Chinese (Simplified) for content, but keep JSON structure keys in English.
-                - Format: Return ONLY valid JSON matching this example: {}
-                """, knowledgePointName, currentMastery, difficultyLevel, learningGoal, formatExample);
+                你是一位20年教龄的中学数学特级教师。
+                知识点：{}
+                当前掌握概率：{}（越低越薄弱）
+                历史常见错误：{}
+                最近错答：{}
+                已过复习间隔：{}天（艾宾浩斯最佳复习时机）
+                难度级别：{}
+                请生成1道精准针对误区的选择题，干扰项体现常见错误，支持LaTeX，输出严格JSON格式。
+                Example: {}
+                """, kpName, probability, commonMistakes, lastWrong, daysSinceReview, difficultyLevel, formatExample);
 
         String response = callQwen(userPrompt);
 

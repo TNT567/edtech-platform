@@ -1,113 +1,147 @@
-# 🎓 EdTech Platform - 个性化智能辅导平台
+# 🎓 EdTech Platform 2025 - 商业级智能教育 SaaS 平台
 
-基于 Spring Boot 和 React 构建的下一代在线教育平台，融合了 **贝叶斯知识追踪 (BKT)** 算法与 **大语言模型 (LLM)**，为学生提供千人千面的个性化学习体验。
+> **Status**: Commercial Ready (v2.1.0) | **License**: Enterprise Proprietary
 
-## ✨ 核心功能
-
-### 1. 🧠 知识状态追踪 (Knowledge Tracing)
-- **核心算法**: 采用标准的 **Bayesian Knowledge Tracing (BKT)** 算法，精准计算学生对每个知识点的掌握概率。
-- **实时计算**: 每次答题后毫秒级更新状态，支持 `P(L0)` (初始), `P(T)` (转移), `P(G)` (猜对), `P(S)` (失误) 四大参数配置。
-- **双层存储架构**:
-  - **L1 缓存 (Redis)**: 保证高并发下的实时读写性能。
-  - **L2 持久化 (MySQL)**: 完整记录历史轨迹，确保数据安全。
-- **可视化**: 集成 ECharts 雷达图，实时展示知识薄弱点与能力维度。
-
-### 2. 🤖 AI 智能辅导 (Powered by Qwen-Plus)
-- **智能出题**: 根据学生的实时掌握度动态生成题目。
-  - *掌握度 < 0.4*: 生成基础概念题，侧重定义与理解。
-  - *掌握度 >= 0.4*: 生成进阶应用题，侧重综合与分析。
-- **智能解析**: 针对错题，AI 自动扮演“耐心导师”角色，生成包含推导步骤和 LaTeX 数学公式的详细解析。
-- **自适应反馈**: 解析内容会分析学生的潜在误区，并提供举一反三的例题。
-
-### 3. 📊 学习分析与预测
-- **智能错题本**: 自动捕获答题错误，归档至错题本，并记录错误次数与时间。
-- **AI 成绩预测**: 基于当前所有知识点的 BKT 掌握度，利用线性回归模型预测最终考试成绩及置信度。
-- **成长报告**: 支持生成学习周报（集成 RabbitMQ 异步处理），统计答题正确率与进步最快的知识点。
+基于 Spring Boot 3 + React 19 + BKT 算法 + Spring AI 构建的下一代个性化智能教育 SaaS 平台。支持多租户、RBAC 权限、付费订阅与全链路可观测性，专为在线教育机构打造。
 
 ---
 
-## 🛠️ 技术栈
+## 🌟 2025 商业版核心特性
+
+### 1. 🛡️ 企业级安全与合规 (Security & Compliance)
+- **Spring Security + JWT**: 无状态认证架构，支持 Token 自动刷新与黑名单。
+- **RBAC 权限体系**: 细粒度控制 `ADMIN` (平台), `TEACHER` (机构), `STUDENT`, `PARENT` 角色。
+- **数据合规**: 敏感字段 (PII) 自动加密存储，防 SQL 注入/XSS，符合 GDPR 隐私标准。
+
+### 2. ⚙️ 个性化设置中心 (Settings Center) [NEW]
+- **全方位自定义**: 9大模块覆盖学习、隐私、外观等设置。
+- **学习偏好引擎**: 自定义每日目标、难度偏好、出题策略权重（高频错题/薄弱点/艾宾浩斯/进阶拓展）。
+- **家长控制**: 扫码绑定家长，支持查看权限控制与每日时长限制。
+- **无感保存**: 全局配置实时防抖保存，体验丝般顺滑。
+
+### 3. 🏢 多租户与机构管理 (Multi-tenancy)
+- **SaaS 架构**: 支持单实例服务多机构（Domain Isolation），数据逻辑隔离。
+- **机构后台**: 独立配置品牌 Logo、专属课程内容与定价策略。
+
+### 4. 💰 商业化与变现 (Monetization)
+- **订阅系统**: 集成 Stripe / Alipay 支付接口，支持月付/年付订阅计划。
+- **订单管理**: 完整的订单生命周期管理（待支付、已支付、退款）。
+
+### 5. 🧠 核心教学引擎 (Core Engine)
+- **BKT 知识追踪**: 贝叶斯算法实时计算知识点掌握概率 (Redis L1 + MySQL L2)。
+- **AI 智能辅导**: 接入 Qwen-Plus 大模型，生成千人千面的题目与详细解析 (Markdown/LaTeX)。
+- **自适应学习路径**: 基于知识图谱与当前状态推荐最佳学习内容。
+- **极致个性化练习**: 
+  - **智能出题策略**: 融合高频错题重练 (40%)、薄弱击破 (30%)、艾宾浩斯复习 (15%)、进阶拓展 (10%)。
+  - **纠错专项模式**: 错题后自动触发 Drill Mode，直到连续答对为止。
+  - **游戏化激励**: 知识点金牌掌握特效，提升学习成就感。
+
+### 6. ☁️ 云原生与可观测性 (Cloud Native)
+- **Docker 容器化**: 提供标准 `Dockerfile` 与 `docker-compose.yml` 一键部署。
+- **全链路监控**: 集成 Actuator + Prometheus + Grafana，实时监控 JVM、DB 连接池与业务指标。
+
+---
+
+## 🛠️ 技术架构
 
 ### 后端 (Backend)
-- **Framework**: Spring Boot 3.1.10
-- **Database**: MySQL 8.0, Redis (Redisson)
-- **ORM**: MyBatis Plus
-- **AI Integration**: Spring AI (适配 Qwen-Plus)
-- **Message Queue**: RabbitMQ (用于异步报告生成)
-- **Build Tool**: Maven
+| 组件 | 技术选型 | 说明 |
+| :--- | :--- | :--- |
+| **Framework** | Spring Boot 3.1.10 | 核心容器 |
+| **Security** | Spring Security + JJWT | 认证与授权 |
+| **Database** | MySQL 8.0 | 业务数据持久化 |
+| **Cache** | Redis 7.0 (Redisson) | 缓存与分布式锁 |
+| **ORM** | MyBatis Plus | 数据访问层 |
+| **AI** | Spring AI / Hutool | LLM 集成 (Qwen) |
+| **MQ** | RabbitMQ | 异步任务 (报告生成) |
+| **Metrics** | Micrometer + Prometheus | 监控指标采集 |
 
 ### 前端 (Frontend)
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **UI Components**: Tailwind CSS, Framer Motion
-- **Visualization**: Recharts
-- **Math Rendering**: Katex / React-Latex
+| 组件 | 技术选型 | 说明 |
+| :--- | :--- | :--- |
+| **Framework** | React 19 + Vite | 高性能 SPA |
+| **Styling** | Tailwind CSS v4 | 原子化 CSS |
+| **Router** | React Router v6 | 路由管理 |
+| **Viz** | Recharts | 数据可视化 (雷达图) |
+| **Math** | KaTeX / React-Latex | 数学公式渲染 |
+| **Icons** | Lucide React | 现代化图标库 |
 
 ---
 
-## 📂 项目结构
+## 🚀 商业版部署指南 (Production Deployment)
+
+### 1. 前置要求
+- Docker & Docker Compose
+- JDK 17+ (仅开发环境)
+- Node.js 18+ (仅开发环境)
+
+### 2. 数据库初始化
+执行以下 SQL 脚本初始化数据库结构：
+1. `sql/init.sql` (核心业务表)
+2. `sql/saas_upgrade.sql` (SaaS 增强表：租户、权限、订单)
+3. `sql/settings_upgrade.sql` (设置中心表：用户偏好、家长绑定) [NEW]
+
+### 3. 一键启动 (Docker Compose)
+在项目根目录下执行：
+```bash
+docker-compose up -d --build
+```
+系统将自动启动以下服务：
+- **MySQL**: 3306 (edtech_db)
+- **Redis**: 6379
+- **RabbitMQ**: 5672 / 15672 (Admin)
+- **Prometheus**: 9090
+- **EdTech Backend**: 8080
+
+### 4. 访问系统
+- **前端页面**: [http://localhost:5173](http://localhost:5173) (开发模式) 或通过 Nginx 反向代理
+- **Swagger 文档**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- **Prometheus**: [http://localhost:9090](http://localhost:9090)
+
+### 5. 默认账号
+| 角色 | 用户名 | 密码 | 权限 |
+| :--- | :--- | :--- | :--- |
+| **超级管理员** | `admin` | `admin123` | 全平台管理 |
+| **学生** | `student` | `123456` | 学习、刷题、查看报告 |
+
+---
+
+## 📂 项目结构 (SaaS Edition)
 
 ```
 edtech-platform2/
-├── edtech-frontend/       # React 前端工程
-├── edtech-web/            # Spring Boot Web 入口与控制器
-├── edtech-service-kt/     # 知识追踪服务 (BKT 算法核心)
-├── edtech-service-ai/     # AI 服务 (LLM 集成)
-├── edtech-service-core/   # 核心业务逻辑 (MQ, 通用配置)
-├── edtech-model/          # 数据库实体与 Mapper
-├── edtech-common/         # 通用工具类
-└── sql/                   # 数据库初始化脚本
+├── edtech-web/            # [核心] Web API, Security Config, Auth Controller
+├── edtech-service-kt/     # [核心] BKT 算法引擎
+├── edtech-service-ai/     # [核心] AI 内容生成服务
+├── edtech-service-core/   # 基础设施 (MQ, Payment Strategy, Tenant Context)
+├── edtech-model/          # 实体定义 (User, Order, Tenant)
+├── edtech-frontend/       # React 前端 (含 Login, Admin Dashboard, Settings)
+├── sql/                   # 数据库脚本 (saas_upgrade.sql, settings_upgrade.sql)
+├── docker-compose.yml     # 容器编排
+└── Dockerfile             # 后端镜像构建
 ```
 
 ---
 
-## 🚀 快速开始
+## 🔌 API 概览
 
-### 1. 环境准备
-- JDK 17+
-- Node.js 18+
-- MySQL 8.0+
-- Redis 6.0+
+### 认证 (Auth)
+- `POST /api/auth/login`: 用户登录 (JWT)
+- `POST /api/auth/register`: 注册新用户
 
-### 2. 数据库初始化
-执行 `sql/init.sql` 脚本，创建数据库 `edtech_db` 及相关表结构。
+### 设置 (Settings) [NEW]
+- `GET /api/settings`: 获取用户全量设置
+- `PUT /api/settings`: 更新用户设置 (支持增量更新)
+- `POST /api/settings/bind-parent`: 绑定家长账号
 
-### 3. 后端启动
-```bash
-cd edtech-web
-mvn spring-boot:run
-```
-*服务默认运行在 `http://localhost:8080`*
+### 商业化 (Commerce)
+- `POST /api/payment/create-order`: 创建订阅订单
+- `GET /api/payment/webhook`: 支付回调 (Stripe/Alipay)
 
-### 4. 前端启动
-```bash
-cd edtech-frontend
-npm install
-npm run dev
-```
-*页面默认运行在 `http://localhost:5173`*
+### 核心学习 (Learning)
+- `GET /api/practice/random`: 获取 AI 推荐题目
+- `POST /api/ai/explain`: 生成错题智能解析
 
 ---
 
-## 📖 使用指南
-
-1.  **访问仪表盘 (Dashboard)**
-    - 登录系统后，首页展示“知识掌握雷达”和“AI 成绩预测”。
-    - 观察雷达图了解自己的强弱项。
-
-2.  **开始智能刷题 (Smart Practice)**
-    - 点击侧边栏“Smart Practice”。
-    - 系统会自动推荐一道题目。
-    - **体验 AI 解析**: 故意选择一个错误答案并提交，系统会自动加载 AI 生成的详细解析。
-
-3.  **查看知识图谱 (Knowledge Graph)**
-    - 点击“Knowledge Graph”查看各学科知识点的层级关系。
-
-4.  **查看成长报告 (Growth Report)**
-    - 点击“Growth Report”查看历史答题记录和统计数据。
-
----
-
-## 🔌 API 文档
-后端启动后，可访问 Swagger UI 查看完整接口文档：
-👉 [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+**© 2025 EdTech Inc. All Rights Reserved.**

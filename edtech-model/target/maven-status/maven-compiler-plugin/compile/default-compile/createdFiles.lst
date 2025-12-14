@@ -1,0 +1,15 @@
+com\edtech\model\mapper\UserSettingsMapper.class
+com\edtech\model\entity\StudentExerciseLog.class
+com\edtech\model\mapper\QuestionMapper.class
+com\edtech\model\mapper\KnowledgePointMapper.class
+com\edtech\model\mapper\MistakeBookMapper.class
+com\edtech\model\vo\KnowledgeStateVO.class
+com\edtech\model\entity\UserSettings.class
+com\edtech\model\mapper\KnowledgeStateMapper.class
+com\edtech\model\entity\MistakeBook.class
+com\edtech\model\entity\KnowledgeState.class
+com\edtech\model\entity\Question.class
+com\edtech\model\entity\KnowledgePoint.class
+com\edtech\model\mapper\StudentExerciseLogMapper.class
+com\edtech\model\mapper\ParentBindingMapper.class
+com\edtech\model\entity\ParentBinding.class
