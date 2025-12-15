@@ -30,37 +30,75 @@ public class ContentGenerationService {
 
     private static final String MODEL = "qwen-plus";
 
-    /**
-     * 根据知识点和掌握度生成补习题目
-     */
-    public GeneratedQuestionVO generateRemedialQuestion(String kpName, double probability, String commonMistakes, String lastWrong, long daysSinceReview) {
-        log.info("Generating content for KP: {}, Mastery: {}", kpName, probability);
+    public GeneratedQuestionVO generateRemedialQuestion(String kpName, double probability, String commonMistakes, String lastWrong, long daysSinceReview, String difficultyOption) {
+        log.info("🎯 AI动态出题: 知识点={}, 掌握度={:.2f}, 难度={}", kpName, probability, difficultyOption);
 
-        String difficultyLevel = probability < 0.4 ? "1 (基础)" : "3 (进阶)";
-        
-        // Manual JSON Schema for Output
-        String formatExample = """
-                {
-                  "content": "Question stem here...",
-                  "options": ["Option A", "Option B", "Option C", "Option D"],
-                  "correctAnswer": "A",
-                  "analysis": "Explanation here...",
-                  "difficulty": 0.5,
-                  "type": 1
+        // 动态难度策略
+        String difficultyLevel;
+        String difficultyPrompt;
+        if (difficultyOption != null) {
+            switch (difficultyOption) {
+                case "Easy" -> {
+                    difficultyLevel = "基础巩固";
+                    difficultyPrompt = "题目应该直接考查基本概念和公式应用，计算步骤不超过3步，避免复杂变形";
                 }
-                """;
+                case "Hard" -> {
+                    difficultyLevel = "综合提升";
+                    difficultyPrompt = "题目应该综合多个知识点，需要深入分析和多步推理，包含一定的技巧性";
+                }
+                default -> {
+                    difficultyLevel = "适中练习";
+                    difficultyPrompt = "题目难度适中，需要理解概念并进行适当计算，有一定思维量但不过分复杂";
+                }
+            }
+        } else {
+            // 根据掌握度自动调整
+            if (probability < 0.4) {
+                difficultyLevel = "基础巩固";
+                difficultyPrompt = "重点巩固基础，题目简单直接，帮助建立信心";
+            } else if (probability > 0.8) {
+                difficultyLevel = "挑战进阶";
+                difficultyPrompt = "适当增加难度，拓展思维，防止知识遗忘";
+            } else {
+                difficultyLevel = "稳步提升";
+                difficultyPrompt = "在现有基础上适度提升，循序渐进";
+            }
+        }
 
+        // 最佳动态Prompt模板
         String userPrompt = StrUtil.format("""
-                你是一位20年教龄的中学数学特级教师。
-                知识点：{}
-                当前掌握概率：{}（越低越薄弱）
-                历史常见错误：{}
-                最近错答：{}
-                已过复习间隔：{}天（艾宾浩斯最佳复习时机）
-                难度级别：{}
-                请生成1道精准针对误区的选择题，干扰项体现常见错误，支持LaTeX，输出严格JSON格式。
-                Example: {}
-                """, kpName, probability, commonMistakes, lastWrong, daysSinceReview, difficultyLevel, formatExample);
+                # 角色设定
+                你是一位拥有20年教学经验的高中数学特级教师，专精个性化教学和因材施教。
+                
+                # 学生画像分析
+                - **目标知识点**: {}
+                - **当前掌握水平**: {:.1%} (0%=完全不会, 100%=完全掌握)
+                - **历史学习误区**: {}
+                - **最近错误情况**: {}
+                - **复习时机**: 距离上次学习已{}天
+                - **本次目标**: {} - {}
+                
+                # 出题要求
+                1. **针对性**: 根据掌握水平{:.1%}，精准定位学生当前需要突破的点
+                2. **误区设计**: 干扰选项必须体现该知识点的典型错误思路
+                3. **LaTeX支持**: 数学公式使用标准LaTeX格式，如 $\\frac{{a}}{{b}}$, $\\sqrt{{x}}$
+                4. **实用性**: 题目贴近高考真题风格，有实际教学价值
+                5. **渐进性**: 难度与学生水平匹配，既有挑战性又不会打击信心
+                
+                # 输出格式 (严格JSON)
+                {{
+                  "content": "题干内容(支持LaTeX公式)",
+                  "options": ["A. 选项内容", "B. 选项内容", "C. 选项内容", "D. 选项内容"],
+                  "correctAnswer": "A",
+                  "analysis": "详细解析(包含解题思路、易错点分析、知识点总结)",
+                  "difficulty": "{}",
+                  "type": 1
+                }}
+                
+                请立即生成一道高质量的数学选择题:
+                """, 
+                kpName, probability, commonMistakes, lastWrong, daysSinceReview, 
+                difficultyLevel, difficultyPrompt, probability, difficultyLevel);
 
         String response = callQwen(userPrompt);
 

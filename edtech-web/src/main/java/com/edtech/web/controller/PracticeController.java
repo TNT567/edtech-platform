@@ -6,6 +6,8 @@ import com.edtech.core.util.RedisUtils;
 import com.edtech.kt.service.KnowledgeTracingService;
 import com.edtech.model.entity.Question;
 import com.edtech.model.entity.StudentExerciseLog;
+import com.edtech.model.mapper.KnowledgePointMapper;
+import com.edtech.model.mapper.QuestionMapper;
 import com.edtech.model.mapper.StudentExerciseLogMapper;
 import com.edtech.web.service.MistakeBookService;
 import com.edtech.web.service.strategy.PracticeStrategyService;
@@ -32,6 +34,8 @@ public class PracticeController {
     private final SpacedRepetitionService sm2Service;
     private final RedisUtils redisUtils;
     private final ContentGenerationService contentService;
+    private final QuestionMapper questionMapper;
+    private final KnowledgePointMapper knowledgePointMapper;
 
     @GetMapping("/random")
     public Map<String, Object> getRandomQuestion() {
@@ -54,40 +58,109 @@ public class PracticeController {
             @RequestParam(required = false) Long knowledgePointId,
             @RequestParam(required = false) String difficulty) {
         
-        Map<String, Object> response = new HashMap<>();
+        log.info("🎯 练习页AI出题请求: subject={}, kpId={}, difficulty={}", subject, knowledgePointId, difficulty);
         
-        if (knowledgePointId != null) {
-            // Targeted generation via AI
-            // In a real scenario, we would fetch KP name from DB
-            String kpName = "Knowledge Point " + knowledgePointId; 
+        // 重定向到新的AI专用接口，保持向后兼容
+        Map<String, Object> aiRequest = new HashMap<>();
+        aiRequest.put("studentId", 1L); // 当前用户ID，实际应从JWT获取
+        aiRequest.put("subject", subject);
+        aiRequest.put("knowledgePointId", knowledgePointId);
+        aiRequest.put("difficulty", difficulty != null ? difficulty : "Medium");
+        
+        try {
+            // 调用AI专用控制器的逻辑 (内部调用，避免HTTP开销)
+            Long studentId = 1L;
+            Long kpIdToUse = knowledgePointId;
+            String kpName = "综合练习";
             
-            // Generate using AI
+            if (knowledgePointId != null) {
+                var kp = knowledgePointMapper.selectById(knowledgePointId);
+                if (kp != null) {
+                    kpName = kp.getName();
+                }
+            } else if (subject != null) {
+                kpName = subject + " 综合训练";
+                // 可以根据科目选择默认知识点
+                var allKp = knowledgePointMapper.selectList(null);
+                if (allKp != null && !allKp.isEmpty()) {
+                    var kp = allKp.get(0);
+                    kpIdToUse = kp.getId();
+                    kpName = kp.getName();
+                }
+            }
+
+            // 从Redis获取学生状态
+            String masteryKey = String.format("student:%s:mastery", studentId);
+            String mistakeKey = String.format("student:%s:common_mistakes", studentId);
+            
+            double probability = 0.5;
+            String commonMistakes = "暂无历史错误记录";
+            
+            if (kpIdToUse != null) {
+                Object masteryObj = redisUtils.hGet(masteryKey, kpIdToUse.toString());
+                if (masteryObj != null) {
+                    probability = Double.parseDouble(masteryObj.toString());
+                }
+                
+                Object mistakeObj = redisUtils.hGet(mistakeKey, kpIdToUse.toString());
+                if (mistakeObj != null) {
+                    commonMistakes = mistakeObj.toString();
+                }
+            }
+
+            // 调用AI生成
             GeneratedQuestionVO vo = contentService.generateRemedialQuestion(
-                kpName, 
-                0.5, // Default mastery if unknown
-                "None", 
-                "None", 
-                0
+                    kpName, probability, commonMistakes, "暂无", 0, difficulty
             );
+
+            // 保存题目
+            Question question = new Question();
+            question.setContent(vo.getStem());
+            question.setKnowledgePointId(kpIdToUse);
+            question.setCorrectAnswer(vo.getCorrectAnswer());
+            if (vo.getOptions() != null) {
+                question.setOptions(cn.hutool.json.JSONUtil.toJsonStr(vo.getOptions()));
+            }
             
-            // Convert VO to Map for frontend compatibility (avoiding Entity limitations)
+            java.math.BigDecimal diffValue = switch (difficulty != null ? difficulty : "Medium") {
+                case "Easy" -> java.math.BigDecimal.valueOf(0.3);
+                case "Hard" -> java.math.BigDecimal.valueOf(0.8);
+                default -> java.math.BigDecimal.valueOf(0.5);
+            };
+            question.setDifficulty(diffValue);
+            question.setType(99); // AI生成标记
+            question.setCreateTime(LocalDateTime.now());
+            questionMapper.insert(question);
+
+            // 构造返回结果
             Map<String, Object> qMap = new HashMap<>();
-            qMap.put("id", System.currentTimeMillis()); // Temp ID
+            qMap.put("id", question.getId());
             qMap.put("content", vo.getStem());
-            qMap.put("options", vo.getOptions()); // List<String> is fine for JSON
+            qMap.put("options", vo.getOptions());
             qMap.put("correctAnswer", vo.getCorrectAnswer());
             qMap.put("analysis", vo.getAnalysis());
-            qMap.put("knowledgePointId", knowledgePointId);
-            
+            qMap.put("knowledgePointId", kpIdToUse);
+            qMap.put("aiGenerated", true);
+
+            Map<String, Object> response = new HashMap<>();
             response.put("data", qMap);
-            response.put("strategy", "专项突破 (AI实时生成)");
-            response.put("strategyCode", "MANUAL");
-        } else {
-            // Fallback to strategy engine if no specific KP
-            return getRandomQuestion();
+            response.put("strategy", String.format("🤖 AI智能出题 (%s)", difficulty != null ? difficulty : "Medium"));
+            response.put("strategyCode", "AI_GENERATED");
+            response.put("studentMastery", probability);
+            
+            log.info("✅ AI题目生成成功: ID={}, 掌握度={:.2f}", question.getId(), probability);
+            return response;
+            
+        } catch (Exception e) {
+            log.error("❌ AI出题失败，返回错误信息", e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", true);
+            errorResponse.put("message", "🤖 AI正在思考中，请稍后重试...");
+            errorResponse.put("retryable", true);
+            
+            return errorResponse;
         }
-        
-        return response;
     }
 
     @PostMapping("/submit")

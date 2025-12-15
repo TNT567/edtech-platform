@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -47,6 +47,39 @@ export default function AppLayout() {
     navigate('/login');
   };
 
+  useEffect(() => {
+    const content = document.getElementById('app-scroll-container');
+    const sidebar = document.getElementById('sidebar-scroll');
+    if (!content || !sidebar) return;
+
+    let ticking = false;
+
+    const syncScroll = () => {
+      const maxContent = content.scrollHeight - content.clientHeight;
+      const maxSidebar = sidebar.scrollHeight - sidebar.clientHeight;
+      if (maxContent <= 0 || maxSidebar <= 0) {
+        ticking = false;
+        return;
+      }
+      const ratio = content.scrollTop / maxContent;
+      const target = ratio * maxSidebar;
+      sidebar.scrollTo({ top: target, behavior: 'smooth' });
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(syncScroll);
+      }
+    };
+
+    content.addEventListener('scroll', handleScroll);
+    return () => {
+      content.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   // Check if user is parent
   const isParent = localStorage.getItem('role') === 'PARENT';
 
@@ -67,7 +100,7 @@ export default function AppLayout() {
           </h1>
         </div>
 
-        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+        <nav id="sidebar-scroll" className="flex-1 space-y-1.5 overflow-y-auto">
           {/* Parent Dashboard Link (if parent) */}
           {isParent && (
             <Link
@@ -223,6 +256,7 @@ export default function AppLayout() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
+          id="app-scroll-container"
           className="flex-1 bg-white/60 backdrop-blur-md md:border md:border-white/20 shadow-sm md:rounded-3xl p-4 md:p-8 overflow-y-auto"
         >
           <Outlet />

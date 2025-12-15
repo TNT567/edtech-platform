@@ -37,6 +37,12 @@ export interface PredictionResult {
     confidence: number;
 }
 
+export interface MasteryTrendPoint {
+  date: string;
+  accuracy: number;
+  total: number;
+}
+
 // --- Mock Data (Fallback) ---
 const MOCK_RADAR_DATA: KnowledgeStateVO[] = [
   { knowledgePointId: 1, knowledgePointName: '函数与导数', score: 0.85, level: 'Master' },
@@ -151,6 +157,32 @@ export async function getStudentReport(studentId: number): Promise<StudentExerci
   }
 }
 
+export async function getMasteryTrend(studentId: number, days = 30): Promise<MasteryTrendPoint[]> {
+  if (USE_MOCK) {
+    const result: MasteryTrendPoint[] = [];
+    const today = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const total = 5 + Math.floor(Math.random() * 10);
+      const accuracy = 0.4 + Math.random() * 0.5;
+      result.push({
+        date: d.toISOString().slice(0, 10),
+        accuracy,
+        total,
+      });
+    }
+    return result;
+  }
+  try {
+    const res = await request.get<MasteryTrendPoint[]>(`/report/trend/${studentId}`, { params: { days } });
+    return res.data;
+  } catch (e) {
+    console.error("Fetch mastery trend failed", e);
+    return [];
+  }
+}
+
 /**
  * 提交答题结果
  */
@@ -211,7 +243,7 @@ export async function getKnowledgeRadar(studentId: number): Promise<KnowledgeSta
 }
 
 /**
- * AI 生成题目 (Manual Generation)
+ * AI 生成题目 (Manual Generation) - 新版本支持真实AI
  */
 export interface GenerateQuestionParams {
     subject: string;
@@ -221,23 +253,58 @@ export interface GenerateQuestionParams {
 
 export async function generatePracticeQuestion(params: GenerateQuestionParams): Promise<QuestionResponse> {
     if (USE_MOCK) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 模拟AI思考时间
+        const difficulties = ['Easy', 'Medium', 'Hard'];
+        const mockQuestions = {
+            'Easy': {
+                ...MOCK_AI_QUESTION,
+                id: Date.now(),
+                stem: "计算 $2 + 3 \\times 4$ 的值是？",
+                options: ["A. 20", "B. 14", "C. 10", "D. 24"],
+                correctAnswer: "B",
+                analysis: "根据运算顺序，先算乘法：$3 \\times 4 = 12$，再算加法：$2 + 12 = 14$。"
+            },
+            'Hard': {
+                ...MOCK_AI_QUESTION,
+                id: Date.now(),
+                stem: "已知函数 $f(x) = \\ln(x+1) - ax$ 在 $(0, +\\infty)$ 上单调递减，则实数 $a$ 的取值范围是？",
+                options: ["A. $a \\geq 1$", "B. $a > 1$", "C. $a \\leq 1$", "D. $a < 1$"],
+                correctAnswer: "A",
+                analysis: "对 $f(x)$ 求导：$f'(x) = \\frac{1}{x+1} - a$。要使函数在 $(0, +\\infty)$ 上单调递减，需 $f'(x) \\leq 0$ 恒成立..."
+            }
+        };
+        
+        const selectedQuestion = mockQuestions[params.difficulty as keyof typeof mockQuestions] || mockQuestions['Easy'];
         return { 
-            data: { ...MOCK_AI_QUESTION, id: Date.now() }, 
-            strategy: 'Manual Selection', 
-            strategyCode: 'MANUAL' 
+            data: selectedQuestion, 
+            strategy: `🤖 AI智能出题 (${params.difficulty})`, 
+            strategyCode: 'AI_GENERATED' 
         };
     }
+    
     try {
-        const res = await request.get<any>('/practice/generate', { params });
+        console.log('🎯 发起AI出题请求:', params);
         
-        // Use same normalization logic as getRandomQuestion
-        let qData = res.data;
+        // 调用新的AI专用接口
+        const res = await request.post<any>('/ai/generate-question', {
+            studentId: 1, // 实际应从用户状态获取
+            subject: params.subject,
+            knowledgePointId: params.knowledgePointId,
+            difficulty: params.difficulty || 'Medium'
+        });
         
-        // Adapt backend response to frontend model
+        // 检查是否是错误响应
+        if (res.data.error) {
+            throw new Error(res.data.message || 'AI生成失败');
+        }
+        
+        // 解析AI生成的题目数据
+        let qData = res.data.data || res.data;
+        
+        // 标准化选项格式
         let opts = qData.options;
         if (typeof opts === 'string') {
-            try { opts = JSON.parse(opts); } catch(e) {}
+            try { opts = JSON.parse(opts); } catch(e) { console.warn('选项解析失败:', e); }
         }
         if (opts && !Array.isArray(opts) && typeof opts === 'object') {
             opts = Object.keys(opts).sort().map(key => opts[key]);
@@ -246,15 +313,37 @@ export async function generatePracticeQuestion(params: GenerateQuestionParams): 
         const question: QuestionData = {
             id: qData.id,
             stem: qData.content,
-            options: opts,
+            options: opts || [],
             correctAnswer: qData.correctAnswer,
-            analysis: qData.analysis || "暂无解析"
+            analysis: qData.analysis || "AI解析生成中..."
         };
 
-        return { data: question, strategy: 'Targeted Practice', strategyCode: 'MANUAL' };
+        const response: QuestionResponse = {
+            data: question, 
+            strategy: res.data.strategy || `🤖 AI智能出题 (${params.difficulty})`, 
+            strategyCode: res.data.strategyCode || 'AI_GENERATED'
+        };
+        
+        console.log('✅ AI题目生成成功:', response);
+        return response;
+        
     } catch (error) {
-        console.error("Failed to generate question", error);
-        return { data: MOCK_AI_QUESTION, strategy: 'Error Fallback', strategyCode: 'ERROR' };
+        console.error("❌ AI出题失败:", error);
+        
+        // 优雅降级 - 返回友好的错误提示
+        const errorQuestion: QuestionData = {
+            id: Date.now(),
+            stem: "🤖 AI正在思考中，请稍后重试...",
+            options: ["A. 重新生成", "B. 切换到随机模式", "C. 调整难度设置", "D. 稍后再试"],
+            correctAnswer: "A",
+            analysis: "AI服务暂时繁忙，建议：\n1. 检查网络连接\n2. 重新生成题目\n3. 或切换到随机练习模式"
+        };
+        
+        return { 
+            data: errorQuestion, 
+            strategy: '⚠️ AI服务异常', 
+            strategyCode: 'ERROR' 
+        };
     }
 }
 
@@ -275,4 +364,3 @@ export async function generateQuestion(topic: string): Promise<QuestionData> {
      return { ...MOCK_AI_QUESTION, id: Date.now() };
   }
 }
-

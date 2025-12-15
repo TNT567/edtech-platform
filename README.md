@@ -94,12 +94,21 @@
 - JDK 17+ (仅开发环境)
 - Node.js 18+ (仅开发环境)
 
+### 1.1 环境变量配置
+复制环境变量模板并配置：
+```bash
+cp .env.example .env
+```
+必需配置：
+- `AI_API_KEY`: 通义千问 Qwen-Plus API 密钥
+- `JWT_SECRET`: JWT 签名密钥 (生产环境请使用安全的256位密钥)
+
 ### 2. 数据库初始化
 执行以下 SQL 脚本初始化数据库结构：
 1. `sql/init.sql` (核心业务表)
 2. `sql/saas_upgrade.sql` (SaaS 增强表：租户、权限、订单)
 3. `sql/settings_upgrade.sql` (设置中心表：用户偏好、家长绑定) [NEW]
-4. `sql/mobile_pages_upgrade.sql` (移动端核心页面表) [NEW]
+4. `sql/gamification_upgrade.sql` (游戏化功能表：成就、积分、排行榜) [NEW]
 
 ### 3. 一键启动 (Docker Compose)
 在项目根目录下执行：
@@ -131,15 +140,19 @@ docker-compose up -d --build
 
 ```
 edtech-platform2/
+├── .github/               # GitHub 模板和工作流
 ├── edtech-web/            # [核心] Web API, Security Config, Auth Controller
 ├── edtech-service-kt/     # [核心] BKT 算法引擎
 ├── edtech-service-ai/     # [核心] AI 内容生成服务
 ├── edtech-service-core/   # 基础设施 (MQ, Payment Strategy, Tenant Context)
 ├── edtech-model/          # 实体定义 (User, Order, Tenant)
 ├── edtech-frontend/       # React 前端 (含 Login, Admin Dashboard, Settings)
-├── sql/                   # 数据库脚本 (saas_upgrade.sql, settings_upgrade.sql)
+├── sql/                   # 数据库脚本 (init, saas, settings, gamification)
 ├── docker-compose.yml     # 容器编排
-└── Dockerfile             # 后端镜像构建
+├── prometheus.yml         # Prometheus 监控配置
+├── .env.example          # 环境变量模板
+├── CONTRIBUTING.md       # 贡献指南
+└── Dockerfile            # 后端镜像构建
 ```
 
 ---

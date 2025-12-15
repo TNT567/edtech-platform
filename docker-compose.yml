@@ -13,6 +13,8 @@ services:
     volumes:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01_init.sql
       - ./sql/saas_upgrade.sql:/docker-entrypoint-initdb.d/02_saas.sql
+      - ./sql/settings_upgrade.sql:/docker-entrypoint-initdb.d/03_settings.sql
+      - ./sql/gamification_upgrade.sql:/docker-entrypoint-initdb.d/04_gamification.sql
       - mysql_data:/var/lib/mysql
 
   # 2. Redis (L1 Cache)
@@ -39,10 +41,14 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/edtech_db?useSSL=false
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/edtech_db?useSSL=false&serverTimezone=Asia/Shanghai
       SPRING_REDIS_HOST: redis
       SPRING_RABBITMQ_HOST: rabbitmq
-      AI_API_KEY: ${AI_API_KEY}
+      AI_API_KEY: ${AI_API_KEY:-sk-default-key}
+      JWT_SECRET: ${JWT_SECRET:-9a4f2c8d3b7a1e6f4c5d8e9a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+    env_file:
+      - .env
     depends_on:
       - mysql
       - redis
