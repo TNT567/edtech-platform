@@ -3,8 +3,8 @@ package com.edtech.web.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.edtech.model.entity.*;
 import com.edtech.model.mapper.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -12,14 +12,24 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/achievement")
-@Slf4j
-@RequiredArgsConstructor
 public class AchievementController {
+
+    private static final Logger log = LoggerFactory.getLogger(AchievementController.class);
 
     private final AchievementMapper achievementMapper;
     private final UserAchievementMapper userAchievementMapper;
     private final UserPointsMapper userPointsMapper;
     private final UserMapper userMapper;
+
+    public AchievementController(AchievementMapper achievementMapper, 
+                                  UserAchievementMapper userAchievementMapper,
+                                  UserPointsMapper userPointsMapper, 
+                                  UserMapper userMapper) {
+        this.achievementMapper = achievementMapper;
+        this.userAchievementMapper = userAchievementMapper;
+        this.userPointsMapper = userPointsMapper;
+        this.userMapper = userMapper;
+    }
 
     /**
      * 获取所有成就定义

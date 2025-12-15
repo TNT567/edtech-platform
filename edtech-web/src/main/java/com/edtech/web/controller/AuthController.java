@@ -1,8 +1,6 @@
 package com.edtech.web.controller;
 
 import com.edtech.web.security.JwtTokenProvider;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,10 +11,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final JwtTokenProvider tokenProvider;
+
+    public AuthController(JwtTokenProvider tokenProvider) {
+        this.tokenProvider = tokenProvider;
+    }
 
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody LoginRequest request) {
@@ -38,17 +39,21 @@ public class AuthController {
         return Map.of("message", "User registered successfully");
     }
 
-    @Data
     public static class LoginRequest {
-        private String username;
-        private String password;
+        public String username;
+        public String password;
+        public String getUsername() { return username; }
+        public String getPassword() { return password; }
     }
 
-    @Data
     public static class RegisterRequest {
-        private String username;
-        private String password;
-        private String email;
-        private String role; // STUDENT, TEACHER
+        public String username;
+        public String password;
+        public String email;
+        public String role; // STUDENT, TEACHER
+        public String getUsername() { return username; }
+        public String getPassword() { return password; }
+        public String getEmail() { return email; }
+        public String getRole() { return role; }
     }
 }

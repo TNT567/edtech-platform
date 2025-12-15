@@ -4,9 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.edtech.model.entity.*;
 import com.edtech.model.mapper.*;
 import com.edtech.model.vo.KnowledgeStateVO;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -16,9 +15,9 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/parent")
-@Slf4j
-@RequiredArgsConstructor
 public class ParentController {
+
+    private static final Logger log = LoggerFactory.getLogger(ParentController.class);
 
     private final ParentControlMapper parentControlMapper;
     private final UserMapper userMapper;
@@ -27,6 +26,19 @@ public class ParentController {
     private final KnowledgePointMapper knowledgePointMapper;
     private final PracticeSessionMapper practiceSessionMapper;
     private final DailyGoalMapper dailyGoalMapper;
+
+    public ParentController(ParentControlMapper parentControlMapper, UserMapper userMapper,
+                            UserPointsMapper userPointsMapper, KnowledgeStateMapper knowledgeStateMapper,
+                            KnowledgePointMapper knowledgePointMapper, PracticeSessionMapper practiceSessionMapper,
+                            DailyGoalMapper dailyGoalMapper) {
+        this.parentControlMapper = parentControlMapper;
+        this.userMapper = userMapper;
+        this.userPointsMapper = userPointsMapper;
+        this.knowledgeStateMapper = knowledgeStateMapper;
+        this.knowledgePointMapper = knowledgePointMapper;
+        this.practiceSessionMapper = practiceSessionMapper;
+        this.dailyGoalMapper = dailyGoalMapper;
+    }
 
     /**
      * 获取家长绑定的孩子列表
@@ -186,13 +198,19 @@ public class ParentController {
         return result;
     }
 
-    @Data
     public static class ParentSettingsRequest {
-        private Long parentId;
-        private Long childId;
-        private Integer dailyTimeLimit;
-        private Integer allowStartHour;
-        private Integer allowEndHour;
-        private Boolean notifyWeeklyReport;
+        public Long parentId;
+        public Long childId;
+        public Integer dailyTimeLimit;
+        public Integer allowStartHour;
+        public Integer allowEndHour;
+        public Boolean notifyWeeklyReport;
+        
+        public Long getParentId() { return parentId; }
+        public Long getChildId() { return childId; }
+        public Integer getDailyTimeLimit() { return dailyTimeLimit; }
+        public Integer getAllowStartHour() { return allowStartHour; }
+        public Integer getAllowEndHour() { return allowEndHour; }
+        public Boolean getNotifyWeeklyReport() { return notifyWeeklyReport; }
     }
 }

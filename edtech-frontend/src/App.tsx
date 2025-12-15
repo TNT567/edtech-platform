@@ -13,10 +13,21 @@ import DailyGoalsPage from './pages/DailyGoalsPage';
 import ParentDashboardPage from './pages/ParentDashboardPage';
 import RequireAuth from './components/auth/RequireAuth';
 
+// Admin Pages
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import KnowledgeManagement from './pages/admin/KnowledgeManagement';
+import PromptManagement from './pages/admin/PromptManagement';
+import Statistics from './pages/admin/Statistics';
+import SystemLogs from './pages/admin/SystemLogs';
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Student Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={
           <RequireAuth>
@@ -33,6 +44,18 @@ function App() {
           <Route path="leaderboard" element={<LeaderboardPage />} />
           <Route path="daily-goals" element={<DailyGoalsPage />} />
           <Route path="parent" element={<ParentDashboardPage />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="knowledge" element={<KnowledgeManagement />} />
+          <Route path="prompts" element={<PromptManagement />} />
+          <Route path="statistics" element={<Statistics />} />
+          <Route path="logs" element={<SystemLogs />} />
         </Route>
       </Routes>
     </BrowserRouter>

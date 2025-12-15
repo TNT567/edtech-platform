@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css';
 import confetti from 'canvas-confetti';
 
 interface AudioContextWindow extends Window {
+  AudioContext?: typeof AudioContext;
   webkitAudioContext?: typeof AudioContext;
 }
 

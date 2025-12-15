@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
-import { QuestionCard, QuestionData } from '../components/chat/QuestionCard';
+import { QuestionCard } from '../components/chat/QuestionCard';
+import type { QuestionData } from '../components/chat/QuestionCard';
 
 // Message Types
 type MessageType = 'text' | 'question';

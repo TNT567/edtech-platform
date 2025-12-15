@@ -7,7 +7,6 @@ import com.edtech.model.entity.KnowledgePoint;
 import com.edtech.model.entity.Question;
 import com.edtech.model.mapper.KnowledgePointMapper;
 import com.edtech.model.mapper.QuestionMapper;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -37,31 +36,30 @@ public class AIQuestionController {
      */
     @PostMapping("/generate-question")
     public Map<String, Object> generateQuestion(@RequestBody GenerateQuestionRequest request) {
-        log.info("🎯 AI动态出题请求: {}", request);
+        log.info("🎯 AI动态出题请求: studentId={}, subject={}, difficulty={}", 
+                request.studentId, request.subject, request.difficulty);
         
         try {
             // 1. 获取知识点信息
-            KnowledgePoint kp = null;
             String kpName = "综合练习";
-            if (request.getKnowledgePointId() != null) {
-                kp = knowledgePointMapper.selectById(request.getKnowledgePointId());
+            if (request.knowledgePointId != null) {
+                KnowledgePoint kp = knowledgePointMapper.selectById(request.knowledgePointId);
                 if (kp != null) {
                     kpName = kp.getName();
                 }
-            } else if (request.getSubject() != null) {
-                kpName = request.getSubject() + " 综合训练";
+            } else if (request.subject != null) {
+                kpName = request.subject + " 综合训练";
             }
 
             // 2. 从Redis获取学生BKT状态和误区信息
-            Long studentId = request.getStudentId();
-            String masteryKey = String.format("student:%s:mastery", studentId);
-            String mistakeKey = String.format("student:%s:common_mistakes", studentId);
-            String wrongFreqKey = String.format("student:%s:wrong_freq", studentId);
+            String masteryKey = String.format("student:%s:mastery", request.studentId);
+            String mistakeKey = String.format("student:%s:common_mistakes", request.studentId);
+            String wrongFreqKey = String.format("student:%s:wrong_freq", request.studentId);
             
             // 获取掌握概率 (默认0.5表示中等水平)
             double probability = 0.5;
-            if (request.getKnowledgePointId() != null) {
-                Object masteryObj = redisUtils.hGet(masteryKey, request.getKnowledgePointId().toString());
+            if (request.knowledgePointId != null) {
+                Object masteryObj = redisUtils.hGet(masteryKey, request.knowledgePointId.toString());
                 if (masteryObj != null) {
                     probability = Double.parseDouble(masteryObj.toString());
                 }
@@ -69,8 +67,8 @@ public class AIQuestionController {
 
             // 获取常见误区
             String commonMistakes = "暂无历史错误记录";
-            if (request.getKnowledgePointId() != null) {
-                Object mistakeObj = redisUtils.hGet(mistakeKey, request.getKnowledgePointId().toString());
+            if (request.knowledgePointId != null) {
+                Object mistakeObj = redisUtils.hGet(mistakeKey, request.knowledgePointId.toString());
                 if (mistakeObj != null) {
                     commonMistakes = mistakeObj.toString();
                 }
@@ -78,8 +76,8 @@ public class AIQuestionController {
 
             // 获取错题频率
             String lastWrong = "暂无";
-            if (request.getKnowledgePointId() != null) {
-                Double wrongCount = redisUtils.zScore(wrongFreqKey, request.getKnowledgePointId().toString());
+            if (request.knowledgePointId != null) {
+                Double wrongCount = redisUtils.zScore(wrongFreqKey, request.knowledgePointId.toString());
                 if (wrongCount != null && wrongCount > 0) {
                     lastWrong = String.format("该知识点错误%d次", wrongCount.intValue());
                 }
@@ -87,9 +85,10 @@ public class AIQuestionController {
 
             // 计算复习间隔天数 (简化处理)
             long daysSinceReview = 0;
+            String difficulty = request.difficulty != null ? request.difficulty : "Medium";
 
             // 3. 调用AI生成服务
-            log.info("🤖 调用AI生成: 知识点={}, 掌握度={}, 难度={}", kpName, probability, request.getDifficulty());
+            log.info("🤖 调用AI生成: 知识点={}, 掌握度={}, 难度={}", kpName, probability, difficulty);
             
             GeneratedQuestionVO aiQuestion = contentService.generateRemedialQuestion(
                 kpName, 
@@ -97,13 +96,13 @@ public class AIQuestionController {
                 commonMistakes, 
                 lastWrong, 
                 daysSinceReview, 
-                request.getDifficulty()
+                difficulty
             );
 
             // 4. 保存到临时题目表 (可选，用于追踪)
             Question question = new Question();
             question.setContent(aiQuestion.getStem());
-            question.setKnowledgePointId(request.getKnowledgePointId());
+            question.setKnowledgePointId(request.knowledgePointId);
             question.setCorrectAnswer(aiQuestion.getCorrectAnswer());
             
             if (aiQuestion.getOptions() != null) {
@@ -111,7 +110,7 @@ public class AIQuestionController {
             }
             
             // 设置难度数值
-            BigDecimal difficultyValue = switch (request.getDifficulty()) {
+            BigDecimal difficultyValue = switch (difficulty) {
                 case "Easy" -> BigDecimal.valueOf(0.3);
                 case "Hard" -> BigDecimal.valueOf(0.8);
                 default -> BigDecimal.valueOf(0.5);
@@ -131,18 +130,18 @@ public class AIQuestionController {
             questionData.put("options", aiQuestion.getOptions());
             questionData.put("correctAnswer", aiQuestion.getCorrectAnswer());
             questionData.put("analysis", aiQuestion.getAnalysis());
-            questionData.put("knowledgePointId", request.getKnowledgePointId());
-            questionData.put("difficulty", request.getDifficulty());
+            questionData.put("knowledgePointId", request.knowledgePointId);
+            questionData.put("difficulty", difficulty);
             questionData.put("aiGenerated", true);
 
             Map<String, Object> response = new HashMap<>();
             response.put("data", questionData);
-            response.put("strategy", String.format("🤖 AI智能出题 (%s难度)", request.getDifficulty()));
+            response.put("strategy", String.format("🤖 AI智能出题 (%s难度)", difficulty));
             response.put("strategyCode", "AI_GENERATED");
             response.put("studentMastery", probability);
             response.put("knowledgePoint", kpName);
             
-            log.info("✅ AI题目生成成功: ID={}, 难度={}", question.getId(), request.getDifficulty());
+            log.info("✅ AI题目生成成功: ID={}, 难度={}", question.getId(), difficulty);
             return response;
 
         } catch (Exception e) {
@@ -163,13 +162,14 @@ public class AIQuestionController {
      */
     @PostMapping("/explain")
     public Map<String, Object> explainQuestion(@RequestBody ExplainRequest request) {
-        log.info("🧠 AI解析请求: 题目长度={}", request.getQuestionContent().length());
+        log.info("🧠 AI解析请求: 题目长度={}", 
+                request.questionContent != null ? request.questionContent.length() : 0);
         
         try {
             String explanation = contentService.generateExplanation(
-                request.getQuestionContent(),
-                request.getWrongAnswer(),
-                request.getCorrectAnswer()
+                request.questionContent,
+                request.wrongAnswer,
+                request.correctAnswer
             );
             
             Map<String, Object> response = new HashMap<>();
@@ -189,18 +189,17 @@ public class AIQuestionController {
         }
     }
 
-    @Data
+    // 使用public字段避免Lombok getter/setter问题
     public static class GenerateQuestionRequest {
-        private Long studentId;
-        private String subject;
-        private Long knowledgePointId;
-        private String difficulty = "Medium"; // Easy, Medium, Hard
+        public Long studentId;
+        public String subject;
+        public Long knowledgePointId;
+        public String difficulty = "Medium"; // Easy, Medium, Hard
     }
 
-    @Data
     public static class ExplainRequest {
-        private String questionContent;
-        private String wrongAnswer;
-        private String correctAnswer;
+        public String questionContent;
+        public String wrongAnswer;
+        public String correctAnswer;
     }
 }

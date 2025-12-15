@@ -4,7 +4,8 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,8 +17,9 @@ import java.util.Map;
  * AI服务诊断工具 - 用于排查AI调用问题
  */
 @Service
-@Slf4j
 public class AIServiceDiagnostic {
+
+    private static final Logger log = LoggerFactory.getLogger(AIServiceDiagnostic.class);
 
     @Value("${spring.ai.openai.api-key}")
     private String apiKey;
@@ -25,16 +27,12 @@ public class AIServiceDiagnostic {
     @Value("${spring.ai.openai.base-url:https://dashscope.aliyuncs.com/compatible-mode}")
     private String baseUrl;
 
-    /**
-     * 诊断AI服务连接和配置
-     */
     public Map<String, Object> diagnoseAIService() {
         Map<String, Object> result = new HashMap<>();
         
         try {
             log.info("🔍 开始AI服务诊断...");
             
-            // 1. 检查配置
             result.put("baseUrl", baseUrl);
             result.put("hasApiKey", apiKey != null && !apiKey.isEmpty());
             result.put("keyLength", apiKey != null ? apiKey.length() : 0);
@@ -46,7 +44,6 @@ public class AIServiceDiagnostic {
                 return result;
             }
             
-            // 2. 测试简单的API调用
             String testResponse = testSimpleAICall();
             result.put("status", "SUCCESS");
             result.put("message", "AI服务连接正常");
@@ -61,12 +58,11 @@ public class AIServiceDiagnostic {
             result.put("message", e.getMessage());
             result.put("errorType", e.getClass().getSimpleName());
             
-            // 详细错误信息
-            if (e.getMessage().contains("401")) {
+            if (e.getMessage() != null && e.getMessage().contains("401")) {
                 result.put("suggestion", "API密钥无效，请检查密钥是否正确");
-            } else if (e.getMessage().contains("timeout")) {
+            } else if (e.getMessage() != null && e.getMessage().contains("timeout")) {
                 result.put("suggestion", "网络超时，请检查网络连接");
-            } else if (e.getMessage().contains("403")) {
+            } else if (e.getMessage() != null && e.getMessage().contains("403")) {
                 result.put("suggestion", "API密钥权限不足或余额不足");
             } else {
                 result.put("suggestion", "请检查网络连接和API配置");
@@ -76,9 +72,6 @@ public class AIServiceDiagnostic {
         return result;
     }
 
-    /**
-     * 测试简单的AI调用
-     */
     private String testSimpleAICall() {
         String url = baseUrl + "/v1/chat/completions";
         
@@ -93,7 +86,6 @@ public class AIServiceDiagnostic {
         body.put("max_tokens", 10);
 
         log.info("🔗 测试AI API调用: {}", url);
-        log.info("📝 请求体: {}", JSONUtil.toJsonStr(body));
 
         try (HttpResponse response = HttpRequest.post(url)
                 .header("Authorization", "Bearer " + apiKey)
@@ -103,7 +95,6 @@ public class AIServiceDiagnostic {
                 .execute()) {
 
             log.info("📡 响应状态: {}", response.getStatus());
-            log.info("📄 响应内容: {}", response.body());
 
             if (!response.isOk()) {
                 throw new RuntimeException("AI API调用失败: " + response.getStatus() + " - " + response.body());
@@ -120,9 +111,6 @@ public class AIServiceDiagnostic {
         }
     }
 
-    /**
-     * 测试数学题目生成
-     */
     public String testMathQuestionGeneration() {
         String url = baseUrl + "/v1/chat/completions";
         
